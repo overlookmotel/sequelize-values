@@ -1,0 +1,37 @@
+before_script:
+  - "mysql -e 'create database sequelize_test;'"
+  - "psql -c 'create database sequelize_test;' -U postgres"
+  - "export SEQ_MYSQL_USER=root"
+  - "export SEQ_PG_USER=postgres"
+  - "export SEQ_PG_PW=postgres"
+
+script:
+  - "make test"
+
+env:
+  - DB=mysql DIALECT=mysql
+  - DB=mysql DIALECT=postgres
+  - DB=mysql DIALECT=postgres-native
+  - DB=mysql DIALECT=sqlite
+  - DB=mysql DIALECT=mariadb
+  - DB=mysql DIALECT=mssql
+
+language: node_js
+
+node_js:
+  - "0.10"
+  - "0.12"
+
+branches:
+  only:
+    - master
+    - dev
+
+cache:
+  directories:
+    - node_modules
+
+addons:
+  postgresql: "9.3"
+
+sudo: false
