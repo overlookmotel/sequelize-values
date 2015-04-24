@@ -68,7 +68,7 @@ Same as `Instance#getValues()`, except removes duplicated data, e.g. removes `id
 you get:
 
 ```js
-	{ name: 'foo', User: { id: 1, name: 'Bar' } }
+{ name: 'foo', User: { id: 1, name: 'Bar' } }
 ```
 
 Useful if you want to e.g. send the values of an Instance to the browser without sending unnecessary duplicated data.
