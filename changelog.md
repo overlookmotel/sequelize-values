@@ -7,3 +7,7 @@
 ## 0.0.2
 
 * README spacing mistake
+
+## Next
+
+* Loosen sequelize dependency version to v2.x.x
