@@ -15,3 +15,7 @@
 * Update lodash dependency
 * Update dev dependencies
 * README contribution section
+
+## Next
+
+* Remove relative path to sequelize in tests
