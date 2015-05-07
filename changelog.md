@@ -16,6 +16,6 @@
 * Update dev dependencies
 * README contribution section
 
-## Next
+## 0.0.4
 
 * Remove relative path to sequelize in tests
