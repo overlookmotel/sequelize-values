@@ -22,6 +22,7 @@
 
 ## Next
 
+* Travis runs tests with Sequelize v3 and v2
 * Test code coverage & Travis sends to coveralls
 * Run jshint on tests
 * Disable Travis dependency cache
