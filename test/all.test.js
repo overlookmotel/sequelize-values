@@ -17,6 +17,9 @@ chai.config.includeStack = true;
 
 // tests
 
+/* jshint expr: true */
+/* global describe, it, beforeEach */
+
 describe(Support.getTestDialectTeaser('Tests'), function () {
 	beforeEach(function() {
 		this.User = this.sequelize.define('User', {name: Sequelize.STRING});
