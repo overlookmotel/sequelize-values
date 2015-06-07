@@ -12,6 +12,7 @@ A few utility functions for getting raw data from Sequelize instances. Includes 
 [![Build Status](https://img.shields.io/travis/overlookmotel/sequelize-values/master.svg)](http://travis-ci.org/overlookmotel/sequelize-values)
 [![Dependency Status](https://img.shields.io/david/overlookmotel/sequelize-values.svg)](https://david-dm.org/overlookmotel/sequelize-values)
 [![Dev dependency Status](https://img.shields.io/david/dev/overlookmotel/sequelize-values.svg)](https://david-dm.org/overlookmotel/sequelize-values)
+[![Coverage Status](https://img.shields.io/coveralls/overlookmotel/sequelize-values/master.svg)](https://coveralls.io/r/overlookmotel/sequelize-values)
 
 ## Usage
 
@@ -81,7 +82,7 @@ Same as `Sequelize.getValues(input)`, but with data de-duplication.
 
 ## Tests
 
-Use `npm test` to run the tests.
+Use `npm test` to run the tests. Use `npm run cover` to check coverage.
 Requires a database called 'sequelize_test' and a db user 'sequelize_test' with no password.
 
 ## Changelog

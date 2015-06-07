@@ -23,6 +23,8 @@
     "mocha": "^2.2.4",
     "chai": "^2.3.0",
     "chai-as-promised": "^5.0.0",
+    "istanbul": "^0.3.14",
+    "coveralls": "^2.11.2",
     "sequelize": "^2.0.0",
     "mysql": "~2.6.2",
     "sqlite3": "^3.0.5",
@@ -39,7 +41,8 @@
     "get"
   ],
   "scripts": {
-    "test": "make all"
+    "test": "make all",
+    "cover": "make cover"
   },
   "engines": {
     "node": ">=0.6.21"
