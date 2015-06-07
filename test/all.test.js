@@ -11,6 +11,8 @@ var chai = require('chai'),
 	Sequelize = Support.Sequelize,
 	Promise = Sequelize.Promise;
 
+var sequelizeVersion = require('sequelize/package.json').version;
+
 // init
 chai.use(promised);
 chai.config.includeStack = true;
@@ -19,6 +21,8 @@ chai.config.includeStack = true;
 
 /* jshint expr: true */
 /* global describe, it, beforeEach */
+
+console.log('Sequelize version:', sequelizeVersion);
 
 describe(Support.getTestDialectTeaser('Tests'), function () {
 	beforeEach(function() {

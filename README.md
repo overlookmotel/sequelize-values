@@ -14,6 +14,8 @@ A few utility functions for getting raw data from Sequelize instances. Includes 
 [![Dev dependency Status](https://img.shields.io/david/dev/overlookmotel/sequelize-values.svg)](https://david-dm.org/overlookmotel/sequelize-values)
 [![Coverage Status](https://img.shields.io/coveralls/overlookmotel/sequelize-values/master.svg)](https://coveralls.io/r/overlookmotel/sequelize-values)
 
+Requires Sequelize v2.x.x or v3.x.x.
+
 ## Usage
 
 ### Loading module
