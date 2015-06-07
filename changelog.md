@@ -19,3 +19,7 @@
 ## 0.0.4
 
 * Remove relative path to sequelize in tests
+
+## Next
+
+* Update README badges to use shields.io

@@ -8,8 +8,10 @@ A few utility functions for getting raw data from Sequelize instances. Includes 
 
 ## Current status
 
-[![Build Status](https://secure.travis-ci.org/overlookmotel/sequelize-values.png?branch=master)](http://travis-ci.org/overlookmotel/sequelize-values)
-[![Dependency Status](https://david-dm.org/overlookmotel/sequelize-values.png)](https://david-dm.org/overlookmotel/sequelize-values)
+[![NPM version](https://img.shields.io/npm/v/sequelize-values.svg)](https://www.npmjs.com/package/sequelize-values)
+[![Build Status](https://img.shields.io/travis/overlookmotel/sequelize-values/master.svg)](http://travis-ci.org/overlookmotel/sequelize-values)
+[![Dependency Status](https://img.shields.io/david/overlookmotel/sequelize-values.svg)](https://david-dm.org/overlookmotel/sequelize-values)
+[![Dev dependency Status](https://img.shields.io/david/dev/overlookmotel/sequelize-values.svg)](https://david-dm.org/overlookmotel/sequelize-values)
 
 ## Usage
 
