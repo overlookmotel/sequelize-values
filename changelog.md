@@ -20,7 +20,7 @@
 
 * Remove relative path to sequelize in tests
 
-## Next
+## 0.1.0
 
 * Support for Sequelize v3.x.x
 * Update dev dependencies in line with Sequelize v3.2.0
