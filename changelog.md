@@ -25,6 +25,7 @@
 * Support for Sequelize v3.x.x
 * Update dev dependencies in line with Sequelize v3.2.0
 * Travis runs tests with Sequelize v3 and v2
+* Tests for `getValues()` on basic values
 * Test code coverage & Travis sends to coveralls
 * Run jshint on tests
 * Disable Travis dependency cache

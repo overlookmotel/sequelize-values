@@ -52,6 +52,24 @@ describe(Support.getTestDialectTeaser('Tests'), function () {
 	});
 
 	describe('Sequelize.getValues(item)', function() {
+		it('handles basic value', function() {
+			var values = Sequelize.getValues(1);
+
+			expect(values).to.equal(1);
+		});
+
+		it('handles null', function() {
+			var values = Sequelize.getValues(null);
+
+			expect(values).to.be.null;
+		});
+
+		it('handles undefined', function() {
+			var values = Sequelize.getValues();
+
+			expect(values).to.be.undefined;
+		});
+
 		it('handles array', function() {
 			return Promise.bind(this).then(function() {
 				return this.Task.findAll({where: {name: 'Washing'}, include: [{model: this.User, as: 'Owner'}]});
