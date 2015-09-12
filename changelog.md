@@ -31,6 +31,6 @@
 * Disable Travis dependency cache
 * Update README badges to use shields.io
 
-## Next
+## 0.1.1
 
 * MSSQL config for tests
