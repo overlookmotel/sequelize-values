@@ -30,3 +30,7 @@
 * Run jshint on tests
 * Disable Travis dependency cache
 * Update README badges to use shields.io
+
+## Next
+
+* MSSQL config for tests
