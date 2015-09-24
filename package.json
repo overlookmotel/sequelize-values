@@ -14,7 +14,7 @@
     "url": "https://github.com/overlookmotel/sequelize-values/issues"
   },
   "dependencies": {
-    "lodash": "3.8.0"
+    "lodash": "^3.10.1"
   },
   "peerDependencies": {
     "sequelize": "2.0.0 - 3.x.x"
