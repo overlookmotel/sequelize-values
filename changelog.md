@@ -37,6 +37,7 @@
 
 ## Next
 
+* Patch for `instance.options` renamed `$options` in Sequelize v3.9.0
 * Update dependency mysql in line with Sequelize v3.8.0
 * Update dependency lodash
 * Update dev dependencies
