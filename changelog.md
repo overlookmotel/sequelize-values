@@ -35,7 +35,7 @@
 
 * MSSQL config for tests
 
-## Next
+## 0.1.2
 
 * Patch for `instance.options` renamed `$options` in Sequelize v3.9.0
 * Update dependency mysql in line with Sequelize v3.8.0
