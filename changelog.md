@@ -34,3 +34,7 @@
 ## 0.1.1
 
 * MSSQL config for tests
+
+## Next
+
+* Update dev dependencies
