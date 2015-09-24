@@ -37,4 +37,5 @@
 
 ## Next
 
+* Update dependency mysql in line with Sequelize v3.8.0
 * Update dev dependencies
