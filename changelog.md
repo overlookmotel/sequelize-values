@@ -59,6 +59,6 @@
 * npm keywords
 * Update license
 
-## Next
+## 1.0.1
 
 * Update `lodash` dependency

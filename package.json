@@ -1,6 +1,6 @@
 {
   "name": "sequelize-values",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Easily get raw data from Sequelize instances",
   "main": "./lib/",
   "author": {
