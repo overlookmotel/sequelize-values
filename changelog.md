@@ -52,5 +52,6 @@
 * Travis CI runs on all branches (to support greenkeeper.io)
 * Drop testing on Travis CI for `mariadb` + `mssql` dialects
 * `.DS_Store` in `.gitignore`
+* README update
 * npm keywords
 * Update license

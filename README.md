@@ -2,17 +2,17 @@
 
 # Easily get raw data from Sequelize instances
 
-## What it does
-
-A few utility functions for getting raw data from Sequelize instances. Includes ability to remove duplicate data.
-
-## Current status
-
 [![NPM version](https://img.shields.io/npm/v/sequelize-values.svg)](https://www.npmjs.com/package/sequelize-values)
 [![Build Status](https://img.shields.io/travis/overlookmotel/sequelize-values/master.svg)](http://travis-ci.org/overlookmotel/sequelize-values)
 [![Dependency Status](https://img.shields.io/david/overlookmotel/sequelize-values.svg)](https://david-dm.org/overlookmotel/sequelize-values)
 [![Dev dependency Status](https://img.shields.io/david/dev/overlookmotel/sequelize-values.svg)](https://david-dm.org/overlookmotel/sequelize-values)
 [![Coverage Status](https://img.shields.io/coveralls/overlookmotel/sequelize-values/master.svg)](https://coveralls.io/r/overlookmotel/sequelize-values)
+
+## What it does
+
+A few utility functions for getting raw data from Sequelize instances. Includes ability to remove duplicate data.
+
+## Current status
 
 Requires Sequelize v2.x.x or v3.x.x.
 
@@ -66,23 +66,44 @@ Task.findAll( { include: [ User ] } )
 
 #### Instance#getValuesDedup()
 
-Same as `Instance#getValues()`, except removes duplicated data, e.g. removes `id` fields which are returned twice. Rather than:
+Same as `Instance#getValues()`, except removes redundant duplicated data, e.g. removes `id` fields which are repeated twice.
+
+Useful if you want to e.g. send the values of an Model Instance to the browser without sending unnecessary duplicated data.
+
+Examples:
+
+##### belongsTo association
 
 ```js
-{ name: 'foo', UserId: 1, User: { id: 1, name: 'Bar' } }
+// .getValues() - UserId is repeated as UserId and user.id
+{ name: 'A task', UserId: 1, User: { id: 1, name: 'A user' } }
+// .getValuesDedup() - UserId is removed
+{ name: 'A task', User: { id: 1, name: 'A user' } }
 ```
 
-you get:
+##### hasMany association
 
 ```js
-{ name: 'foo', User: { id: 1, name: 'Bar' } }
+// .getValues() - UserId is repeated as id and Tasks[].UserId
+{ id: 1, name: 'A user', Tasks: [ { UserId: 1, name: 'A task' } ] }
+// .getValuesDedup() - Tasks[].UserId is removed
+{ id: 1, name: 'A user', Tasks: [ { name: 'A task' } ] }
 ```
 
-Useful if you want to e.g. send the values of an Instance to the browser without sending unnecessary duplicated data.
+##### belongsToMany association
+
+```js
+// .getValues()
+//   - UserId is repeated as id and Tasks[].UserTask.UserId
+//   - TaskId is repeated as Tasks[].id and Tasks[].UserTask.TaskId
+{ id: 1, name: 'A user', Tasks: [ { id: 2, name: 'A task', UserTask: { UserId: 1, TaskId: 2 } } ] }
+// .getValuesDedup() - Tasks[].UserTask is removed
+{ id: 1, name: 'A user', Tasks: [ { id: 2, name: 'A task' } ] }
+```
 
 #### Sequelize.getValuesDedup(input)
 
-Same as `Sequelize.getValues(input)`, but with data de-duplication.
+Same as `Sequelize.getValues(input)`, but with data de-duplication as per `Instance#getValuesDedup()`.
 
 ## Tests
 
@@ -91,7 +112,7 @@ Requires a database called 'sequelize_test' and a db user 'sequelize_test' with 
 
 ## Changelog
 
-See changelog.md
+See [changelog.md](https://github.com/overlookmotel/sequelize-values/blob/master/changelog.md)
 
 ## Issues
 
