@@ -26,142 +26,2147 @@ console.log('Sequelize version:', sequelizeVersion);
 
 describe(Support.getTestDialectTeaser('Tests'), function () {
 	beforeEach(function() {
-		this.User = this.sequelize.define('User', {name: Sequelize.STRING});
-		this.Task = this.sequelize.define('Task', {name: Sequelize.STRING});
-		this.TaskWorker = this.sequelize.define('TaskWorker', {}, {tableName: 'TasksWorkers'});
+		// models
+		this.User = this.sequelize.define('User', {name: Sequelize.STRING}, {timestamps: false});
+		this.Task = this.sequelize.define('Task', {name: Sequelize.STRING}, {timestamps: false});
+		this.Profile = this.sequelize.define('Profile', {name: Sequelize.STRING}, {timestamps: false});
+		this.Group = this.sequelize.define('Group', {name: Sequelize.STRING}, {timestamps: false});
+		this.Party = this.sequelize.define('Party', {name: Sequelize.STRING}, {timestamps: false});
+
+		// through models
+		this.TaskWorker = this.sequelize.define('TaskWorker', {}, {tableName: 'TasksWorkers', timestamps: false});
+		this.TaskSupervisor = this.sequelize.define('TaskSupervisor', {status: Sequelize.STRING}, {tableName: 'TasksSupervisors', timestamps: false});
+		this.UserGroup = this.sequelize.define('UserGroup', {}, {tableName: 'UsersGroups', timestamps: false});
+		this.UserParty = this.sequelize.define('UserParty', {status: Sequelize.STRING}, {tableName: 'UsersParties', timestamps: false});
+		this.UserLike = this.sequelize.define('UserLike', {}, {tableName: 'UsersLikes', timestamps: false});
+		this.UserHate = this.sequelize.define('UserHate', {status: Sequelize.STRING}, {tableName: 'UsersHates', timestamps: false});
+
+		// one-to-one relationships
+		this.Profile.belongsTo(this.User);
+		this.User.hasOne(this.Profile);
+
+		this.Profile.belongsTo(this.User, {as: 'AltUser'});
+		this.User.hasOne(this.Profile, {as: 'AltProfile', foreignKey: 'AltUserId'});
+
+		// one-to-many relationships
+		this.Task.belongsTo(this.User);
+		this.User.hasMany(this.Task);
 
 		this.Task.belongsTo(this.User, {as: 'Owner'});
 		this.User.hasMany(this.Task, {as: 'OwnedTasks', foreignKey: 'OwnerId'});
 
+		// many-to-many relationships
 		this.Task.belongsToMany(this.User, {as: 'Workers', through: this.TaskWorker});
 		this.User.belongsToMany(this.Task, {as: 'WorkTasks', through: this.TaskWorker});
 
+		this.Task.belongsToMany(this.User, {as: 'Supervisors', through: this.TaskSupervisor});
+		this.User.belongsToMany(this.Task, {as: 'SuperviseTasks', through: this.TaskSupervisor});
+
+		this.Group.belongsToMany(this.User, {through: this.UserGroup});
+		this.User.belongsToMany(this.Group, {through: this.UserGroup});
+
+		this.Party.belongsToMany(this.User, {through: this.UserParty});
+		this.User.belongsToMany(this.Party, {through: this.UserParty});
+
+		// many-to-many self relationships
+		this.User.belongsToMany(this.User, {as: 'Likes', through: this.UserLike, foreignKey: 'UserId'});
+		this.User.belongsToMany(this.User, {as: 'Likers', through: this.UserLike, foreignKey: 'LikeId'});
+
+		this.User.belongsToMany(this.User, {as: 'Hates', through: this.UserHate, foreignKey: 'UserId'});
+		this.User.belongsToMany(this.User, {as: 'Haters', through: this.UserHate, foreignKey: 'HateId'});
+
+		// sync db and create records
 		return Promise.bind(this).then(function() {
 			return this.sequelize.sync({force: true});
 		}).then(function() {
-			return this.User.create({name: 'Bob'});
-		}).then(function(user) {
-			this.bob = user;
-			return this.Task.create({name: 'Washing'});
-		}).then(function(task) {
-			this.washing = task;
-			return this.washing.setOwner(this.bob);
-		}).then(function() {
-			return this.washing.addWorker(this.bob);
+			return Promise.all([
+				this.User.create({name: 'Bob'}),
+				this.User.create({name: 'John'}),
+				this.Profile.create({name: 'Profile'}),
+				this.Task.create({name: 'Washing'}),
+				this.Group.create({name: 'Admin'}),
+				this.Party.create({name: 'Wild'})
+			]);
+		}).spread(function(bob, john, profile, washing, admin, wild) {
+			this.bob = bob;
+			this.john = john;
+			this.profile = profile;
+			this.washing = washing;
+			this.admin = admin;
+			this.wild = wild;
+
+			return Promise.all([
+				this.profile.setUser(this.bob),
+				this.profile.setAltUser(this.john),
+				this.washing.setUser(this.john),
+				this.washing.setOwner(this.bob),
+				this.washing.addWorker(this.bob),
+				this.washing.addSupervisor(this.john, {status: 'OK'}),
+				this.admin.addUser(this.bob),
+				this.wild.addUser(this.bob, {status: 'OK'}),
+				this.bob.addLike(this.john),
+				this.john.addHate(this.bob, {status: 'OK'})
+			]);
 		});
 	});
 
-	describe('Sequelize.getValues(item)', function() {
-		it('handles basic value', function() {
-			var values = Sequelize.getValues(1);
+	describe('Sequelize.getValues()', function() {
+		describe('handles basic value', function() {
+			it('literal', function() {
+				var values = Sequelize.getValues(1);
 
-			expect(values).to.equal(1);
-		});
+				expect(values).to.equal(1);
+			});
 
-		it('handles null', function() {
-			var values = Sequelize.getValues(null);
+			it('null', function() {
+				var values = Sequelize.getValues(null);
 
-			expect(values).to.be.null;
-		});
+				expect(values).to.be.null;
+			});
 
-		it('handles undefined', function() {
-			var values = Sequelize.getValues();
+			it('undefined', function() {
+				var values = Sequelize.getValues();
 
-			expect(values).to.be.undefined;
-		});
-
-		it('handles array', function() {
-			return Promise.bind(this).then(function() {
-				return this.Task.findAll({where: {name: 'Washing'}, include: [{model: this.User, as: 'Owner'}]});
-			}).then(function(items) {
-				var values = Sequelize.getValues(items);
-
-				expect(values.dataValues).not.to.exist;
-				expect(values[0]).to.be.ok;
-				expect(values[0].dataValues).not.to.exist;
-				expect(values[0].Owner).to.be.ok;
-				expect(values[0].Owner.dataValues).not.to.exist;
-				expect(values[0].Owner.id).to.equal(this.bob.id);
+				expect(values).to.be.undefined;
 			});
 		});
 
-		it('handles object', function() {
-			return Promise.bind(this).then(function() {
-				return this.Task.findAll({where: {name: 'Washing'}, include: [{model: this.User, as: 'Owner'}]});
-			}).then(function(items) {
-				var values = Sequelize.getValues({items: items});
+		describe('handles object', function() {
+			it('with no include', function() {
+				return Promise.bind(this).then(function() {
+					return this.Task.find({where: {name: 'Washing'}});
+				}).then(function(item) {
+					var values = Sequelize.getValues(item);
 
-				expect(values).to.be.ok;
-				expect(values.items.dataValues).not.to.exist;
-				expect(values.items[0]).to.be.ok;
-				expect(values.items[0].dataValues).not.to.exist;
-				expect(values.items[0].Owner).to.be.ok;
-				expect(values.items[0].Owner.dataValues).not.to.exist;
-				expect(values.items[0].Owner.id).to.equal(this.bob.id);
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.washing.id,
+						name: 'Washing',
+						UserId: this.john.id,
+						OwnerId: this.bob.id
+					});
+				});
+			});
+
+			describe('with belongsTo include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.Task.find({
+							where: {name: 'Washing'},
+							include: [{model: this.User}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValues(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.washing.id,
+							name: 'Washing',
+							UserId: this.john.id,
+							OwnerId: this.bob.id,
+							User: {
+								id: this.john.id,
+								name: 'John'
+							}
+						});
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.Task.find({
+							where: {name: 'Washing'},
+							include: [{model: this.User, as: 'Owner'}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValues(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.washing.id,
+							name: 'Washing',
+							UserId: this.john.id,
+							OwnerId: this.bob.id,
+							Owner: {
+								id: this.bob.id,
+								name: 'Bob'
+							}
+						});
+					});
+				});
+			});
+
+			describe('with hasOne include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'Bob'},
+							include: [{model: this.Profile}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValues(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.bob.id,
+							name: 'Bob',
+							Profile: {
+								id: this.profile.id,
+								name: 'Profile',
+								UserId: this.bob.id,
+								AltUserId: this.john.id
+							}
+						});
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'John'},
+							include: [{model: this.Profile, as: 'AltProfile'}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValues(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.john.id,
+							name: 'John',
+							AltProfile: {
+								id: this.profile.id,
+								name: 'Profile',
+								UserId: this.bob.id,
+								AltUserId: this.john.id
+							}
+						});
+					});
+				});
+			});
+
+			describe('with hasMany include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'John'},
+							include: [{model: this.Task}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValues(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.john.id,
+							name: 'John',
+							Tasks: [{
+								id: this.washing.id,
+								name: 'Washing',
+								UserId: this.john.id,
+								OwnerId: this.bob.id
+							}]
+						});
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'Bob'},
+							include: [{model: this.Task, as: 'OwnedTasks'}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValues(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.bob.id,
+							name: 'Bob',
+							OwnedTasks: [{
+								id: this.washing.id,
+								name: 'Washing',
+								UserId: this.john.id,
+								OwnerId: this.bob.id
+							}]
+						});
+					});
+				});
+			});
+
+			describe('with belongsToMany include', function() {
+				describe('other join', function() {
+					describe('with no as', function() {
+						it('with no through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.find({
+									where: {name: 'Bob'},
+									include: [{model: this.Group}]
+								});
+							}).then(function(item) {
+								var values = Sequelize.getValues(item);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal({
+									id: this.bob.id,
+									name: 'Bob',
+									Groups: [{
+										id: this.admin.id,
+										name: 'Admin',
+										UserGroup: {
+											UserId: this.bob.id,
+											GroupId: this.admin.id
+										}
+									}]
+								});
+							});
+						});
+
+						it('with through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.find({
+									where: {name: 'Bob'},
+									include: [{model: this.Party}]
+								});
+							}).then(function(item) {
+								var values = Sequelize.getValues(item);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal({
+									id: this.bob.id,
+									name: 'Bob',
+									Parties: [{
+										id: this.wild.id,
+										name: 'Wild',
+										UserParty: {
+											UserId: this.bob.id,
+											PartyId: this.wild.id,
+											status: 'OK'
+										}
+									}]
+								});
+							});
+						});
+					});
+
+					describe('with as', function() {
+						it('with no through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.find({
+									where: {name: 'Bob'},
+									include: [{model: this.Task, as: 'WorkTasks'}]
+								});
+							}).then(function(item) {
+								var values = Sequelize.getValues(item);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal({
+									id: this.bob.id,
+									name: 'Bob',
+									WorkTasks: [{
+										id: this.washing.id,
+										name: 'Washing',
+										UserId: this.john.id,
+										OwnerId: this.bob.id,
+										TaskWorker: {
+											TaskId: this.washing.id,
+											UserId: this.bob.id
+										}
+									}]
+								});
+							});
+						});
+
+						it('with through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.find({
+									where: {name: 'John'},
+									include: [{model: this.Task, as: 'SuperviseTasks'}]
+								});
+							}).then(function(item) {
+								var values = Sequelize.getValues(item);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal({
+									id: this.john.id,
+									name: 'John',
+									SuperviseTasks: [{
+										id: this.washing.id,
+										name: 'Washing',
+										UserId: this.john.id,
+										OwnerId: this.bob.id,
+										TaskSupervisor: {
+											TaskId: this.washing.id,
+											UserId: this.john.id,
+											status: 'OK'
+										}
+									}]
+								});
+							});
+						});
+					});
+				});
+
+				describe('self join', function() {
+					it('with no through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'Bob'},
+								include: [{model: this.User, as: 'Likes'}]
+							});
+						}).then(function(item) {
+							var values = Sequelize.getValues(item);
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.bob.id,
+								name: 'Bob',
+								Likes: [{
+									id: this.john.id,
+									name: 'John',
+									UserLike: {
+										UserId: this.bob.id,
+										LikeId: this.john.id
+									}
+								}]
+							});
+						});
+					});
+
+					it('with through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'John'},
+								include: [{model: this.User, as: 'Hates'}]
+							});
+						}).then(function(item) {
+							var values = Sequelize.getValues(item);
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.john.id,
+								name: 'John',
+								Hates: [{
+									id: this.bob.id,
+									name: 'Bob',
+									UserHate: {
+										UserId: this.john.id,
+										HateId: this.bob.id,
+										status: 'OK'
+									}
+								}]
+							});
+						});
+					});
+				});
+			});
+		});
+
+		describe('handles array', function() {
+			it('with no include', function() {
+				return Promise.bind(this).then(function() {
+					return this.Task.findAll({where: {name: 'Washing'}});
+				}).then(function(items) {
+					var values = Sequelize.getValues(items);
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal([{
+						id: this.washing.id,
+						name: 'Washing',
+						UserId: this.john.id,
+						OwnerId: this.bob.id
+					}]);
+				});
+			});
+
+			describe('with belongsTo include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.Task.findAll({
+							where: {name: 'Washing'},
+							include: [{model: this.User}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValues(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.washing.id,
+							name: 'Washing',
+							UserId: this.john.id,
+							OwnerId: this.bob.id,
+							User: {
+								id: this.john.id,
+								name: 'John'
+							}
+						}]);
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.Task.findAll({
+							where: {name: 'Washing'},
+							include: [{model: this.User, as: 'Owner'}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValues(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.washing.id,
+							name: 'Washing',
+							UserId: this.john.id,
+							OwnerId: this.bob.id,
+							Owner: {
+								id: this.bob.id,
+								name: 'Bob'
+							}
+						}]);
+					});
+				});
+			});
+
+			describe('with hasOne include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.findAll({
+							where: {name: 'Bob'},
+							include: [{model: this.Profile}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValues(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.bob.id,
+							name: 'Bob',
+							Profile: {
+								id: this.profile.id,
+								name: 'Profile',
+								UserId: this.bob.id,
+								AltUserId: this.john.id
+							}
+						}]);
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.findAll({
+							where: {name: 'John'},
+							include: [{model: this.Profile, as: 'AltProfile'}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValues(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.john.id,
+							name: 'John',
+							AltProfile: {
+								id: this.profile.id,
+								name: 'Profile',
+								UserId: this.bob.id,
+								AltUserId: this.john.id
+							}
+						}]);
+					});
+				});
+			});
+
+			describe('with hasMany include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.findAll({
+							where: {name: 'John'},
+							include: [{model: this.Task}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValues(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.john.id,
+							name: 'John',
+							Tasks: [{
+								id: this.washing.id,
+								name: 'Washing',
+								UserId: this.john.id,
+								OwnerId: this.bob.id
+							}]
+						}]);
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.findAll({
+							where: {name: 'Bob'},
+							include: [{model: this.Task, as: 'OwnedTasks'}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValues(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.bob.id,
+							name: 'Bob',
+							OwnedTasks: [{
+								id: this.washing.id,
+								name: 'Washing',
+								UserId: this.john.id,
+								OwnerId: this.bob.id
+							}]
+						}]);
+					});
+				});
+			});
+
+			describe('with belongsToMany include', function() {
+				describe('other join', function() {
+					describe('with no as', function() {
+						it('with no through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.findAll({
+									where: {name: 'Bob'},
+									include: [{model: this.Group}]
+								});
+							}).then(function(items) {
+								var values = Sequelize.getValues(items);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal([{
+									id: this.bob.id,
+									name: 'Bob',
+									Groups: [{
+										id: this.admin.id,
+										name: 'Admin',
+										UserGroup: {
+											UserId: this.bob.id,
+											GroupId: this.admin.id
+										}
+									}]
+								}]);
+							});
+						});
+
+						it('with through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.findAll({
+									where: {name: 'Bob'},
+									include: [{model: this.Party}]
+								});
+							}).then(function(items) {
+								var values = Sequelize.getValues(items);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal([{
+									id: this.bob.id,
+									name: 'Bob',
+									Parties: [{
+										id: this.wild.id,
+										name: 'Wild',
+										UserParty: {
+											UserId: this.bob.id,
+											PartyId: this.wild.id,
+											status: 'OK'
+										}
+									}]
+								}]);
+							});
+						});
+					});
+
+					describe('with as', function() {
+						it('with no through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.findAll({
+									where: {name: 'Bob'},
+									include: [{model: this.Task, as: 'WorkTasks'}]
+								});
+							}).then(function(items) {
+								var values = Sequelize.getValues(items);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal([{
+									id: this.bob.id,
+									name: 'Bob',
+									WorkTasks: [{
+										id: this.washing.id,
+										name: 'Washing',
+										UserId: this.john.id,
+										OwnerId: this.bob.id,
+										TaskWorker: {
+											TaskId: this.washing.id,
+											UserId: this.bob.id
+										}
+									}]
+								}]);
+							});
+						});
+
+						it('with through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.findAll({
+									where: {name: 'John'},
+									include: [{model: this.Task, as: 'SuperviseTasks'}]
+								});
+							}).then(function(items) {
+								var values = Sequelize.getValues(items);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal([{
+									id: this.john.id,
+									name: 'John',
+									SuperviseTasks: [{
+										id: this.washing.id,
+										name: 'Washing',
+										UserId: this.john.id,
+										OwnerId: this.bob.id,
+										TaskSupervisor: {
+											TaskId: this.washing.id,
+											UserId: this.john.id,
+											status: 'OK'
+										}
+									}]
+								}]);
+							});
+						});
+					});
+				});
+
+				describe('self join', function() {
+					it('with no through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.findAll({
+								where: {name: 'Bob'},
+								include: [{model: this.User, as: 'Likes'}]
+							});
+						}).then(function(items) {
+							var values = Sequelize.getValues(items);
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal([{
+								id: this.bob.id,
+								name: 'Bob',
+								Likes: [{
+									id: this.john.id,
+									name: 'John',
+									UserLike: {
+										UserId: this.bob.id,
+										LikeId: this.john.id
+									}
+								}]
+							}]);
+						});
+					});
+
+					it('with through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.findAll({
+								where: {name: 'John'},
+								include: [{model: this.User, as: 'Hates'}]
+							});
+						}).then(function(items) {
+							var values = Sequelize.getValues(items);
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal([{
+								id: this.john.id,
+								name: 'John',
+								Hates: [{
+									id: this.bob.id,
+									name: 'Bob',
+									UserHate: {
+										UserId: this.john.id,
+										HateId: this.bob.id,
+										status: 'OK'
+									}
+								}]
+							}]);
+						});
+					});
+				});
 			});
 		});
 	});
 
-	it('Instance#getValues()', function() {
-		return Promise.bind(this).then(function() {
-			return this.Task.find({where: {name: 'Washing'}, include: [{model: this.User, as: 'Owner'}]});
-		}).then(function(item) {
-			var values = item.getValues();
-
-			expect(values.dataValues).not.to.exist;
-			expect(values.Owner).to.be.ok;
-			expect(values.Owner.dataValues).not.to.exist;
-			expect(values.Owner.id).to.equal(this.bob.id);
-		});
-	});
-
-	describe('one-to-many join', function() {
-		it('Sequelize.getValuesDedup(item)', function() {
+	describe('ModelInstance#getValues()', function() {
+		it('with no include', function() {
 			return Promise.bind(this).then(function() {
-				return this.Task.findAll({where: {name: 'Washing'}, include: [{model: this.User, as: 'Owner'}]});
-			}).then(function(items) {
-				var values = Sequelize.getValuesDedup(items);
+				return this.Task.find({where: {name: 'Washing'}});
+			}).then(function(item) {
+				var values = item.getValues();
 
-				expect(values.dataValues).not.to.exist;
-				expect(values[0]).to.be.ok;
-				expect(values[0].dataValues).not.to.exist;
-				expect(values[0].OwnerId).not.to.exist;
-				expect(values[0].Owner).to.be.ok;
-				expect(values[0].Owner.dataValues).not.to.exist;
-				expect(values[0].Owner.id).to.equal(this.bob.id);
+				expectPlain(values);
+
+				expect(values).to.deep.equal({
+					id: this.washing.id,
+					name: 'Washing',
+					UserId: this.john.id,
+					OwnerId: this.bob.id
+				});
 			});
 		});
 
-		it('Instance#getValuesDedup()', function() {
+		describe('with belongsTo include', function() {
+			it('with no as', function() {
+				return Promise.bind(this).then(function() {
+					return this.Task.find({
+						where: {name: 'Washing'},
+						include: [{model: this.User}]
+					});
+				}).then(function(item) {
+					var values = item.getValues();
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.washing.id,
+						name: 'Washing',
+						UserId: this.john.id,
+						OwnerId: this.bob.id,
+						User: {
+							id: this.john.id,
+							name: 'John'
+						}
+					});
+				});
+			});
+
+			it('with as', function() {
+				return Promise.bind(this).then(function() {
+					return this.Task.find({
+						where: {name: 'Washing'},
+						include: [{model: this.User, as: 'Owner'}]
+					});
+				}).then(function(item) {
+					var values = item.getValues();
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.washing.id,
+						name: 'Washing',
+						UserId: this.john.id,
+						OwnerId: this.bob.id,
+						Owner: {
+							id: this.bob.id,
+							name: 'Bob'
+						}
+					});
+				});
+			});
+		});
+
+		describe('with hasOne include', function() {
+			it('with no as', function() {
+				return Promise.bind(this).then(function() {
+					return this.User.find({
+						where: {name: 'Bob'},
+						include: [{model: this.Profile}]
+					});
+				}).then(function(item) {
+					var values = item.getValues();
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.bob.id,
+						name: 'Bob',
+						Profile: {
+							id: this.profile.id,
+							name: 'Profile',
+							UserId: this.bob.id,
+							AltUserId: this.john.id
+						}
+					});
+				});
+			});
+
+			it('with as', function() {
+				return Promise.bind(this).then(function() {
+					return this.User.find({
+						where: {name: 'John'},
+						include: [{model: this.Profile, as: 'AltProfile'}]
+					});
+				}).then(function(item) {
+					var values = item.getValues();
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.john.id,
+						name: 'John',
+						AltProfile: {
+							id: this.profile.id,
+							name: 'Profile',
+							UserId: this.bob.id,
+							AltUserId: this.john.id
+						}
+					});
+				});
+			});
+		});
+
+		describe('with hasMany include', function() {
+			it('with no as', function() {
+				return Promise.bind(this).then(function() {
+					return this.User.find({
+						where: {name: 'John'},
+						include: [{model: this.Task}]
+					});
+				}).then(function(item) {
+					var values = item.getValues();
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.john.id,
+						name: 'John',
+						Tasks: [{
+							id: this.washing.id,
+							name: 'Washing',
+							UserId: this.john.id,
+							OwnerId: this.bob.id
+						}]
+					});
+				});
+			});
+
+			it('with as', function() {
+				return Promise.bind(this).then(function() {
+					return this.User.find({
+						where: {name: 'Bob'},
+						include: [{model: this.Task, as: 'OwnedTasks'}]
+					});
+				}).then(function(item) {
+					var values = item.getValues();
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.bob.id,
+						name: 'Bob',
+						OwnedTasks: [{
+							id: this.washing.id,
+							name: 'Washing',
+							UserId: this.john.id,
+							OwnerId: this.bob.id
+						}]
+					});
+				});
+			});
+		});
+
+		describe('with belongsToMany include', function() {
+			describe('other join', function() {
+				describe('with no as', function() {
+					it('with no through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'Bob'},
+								include: [{model: this.Group}]
+							});
+						}).then(function(item) {
+							var values = item.getValues();
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.bob.id,
+								name: 'Bob',
+								Groups: [{
+									id: this.admin.id,
+									name: 'Admin',
+									UserGroup: {
+										UserId: this.bob.id,
+										GroupId: this.admin.id
+									}
+								}]
+							});
+						});
+					});
+
+					it('with through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'Bob'},
+								include: [{model: this.Party}]
+							});
+						}).then(function(item) {
+							var values = item.getValues();
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.bob.id,
+								name: 'Bob',
+								Parties: [{
+									id: this.wild.id,
+									name: 'Wild',
+									UserParty: {
+										UserId: this.bob.id,
+										PartyId: this.wild.id,
+										status: 'OK'
+									}
+								}]
+							});
+						});
+					});
+				});
+
+				describe('with as', function() {
+					it('with no through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'Bob'},
+								include: [{model: this.Task, as: 'WorkTasks'}]
+							});
+						}).then(function(item) {
+							var values = item.getValues();
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.bob.id,
+								name: 'Bob',
+								WorkTasks: [{
+									id: this.washing.id,
+									name: 'Washing',
+									UserId: this.john.id,
+									OwnerId: this.bob.id,
+									TaskWorker: {
+										TaskId: this.washing.id,
+										UserId: this.bob.id
+									}
+								}]
+							});
+						});
+					});
+
+					it('with through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'John'},
+								include: [{model: this.Task, as: 'SuperviseTasks'}]
+							});
+						}).then(function(item) {
+							var values = item.getValues();
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.john.id,
+								name: 'John',
+								SuperviseTasks: [{
+									id: this.washing.id,
+									name: 'Washing',
+									UserId: this.john.id,
+									OwnerId: this.bob.id,
+									TaskSupervisor: {
+										TaskId: this.washing.id,
+										UserId: this.john.id,
+										status: 'OK'
+									}
+								}]
+							});
+						});
+					});
+				});
+			});
+
+			describe('self join', function() {
+				it('with no through fields', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'Bob'},
+							include: [{model: this.User, as: 'Likes'}]
+						});
+					}).then(function(item) {
+						var values = item.getValues();
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.bob.id,
+							name: 'Bob',
+							Likes: [{
+								id: this.john.id,
+								name: 'John',
+								UserLike: {
+									UserId: this.bob.id,
+									LikeId: this.john.id
+								}
+							}]
+						});
+					});
+				});
+
+				it('with through fields', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'John'},
+							include: [{model: this.User, as: 'Hates'}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValues(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.john.id,
+							name: 'John',
+							Hates: [{
+								id: this.bob.id,
+								name: 'Bob',
+								UserHate: {
+									UserId: this.john.id,
+									HateId: this.bob.id,
+									status: 'OK'
+								}
+							}]
+						});
+					});
+				});
+			});
+		});
+	});
+
+	describe('Sequelize.getValuesDedup()', function() {
+		describe('handles basic value', function() {
+			it('literal', function() {
+				var values = Sequelize.getValuesDedup(1);
+
+				expect(values).to.equal(1);
+			});
+
+			it('null', function() {
+				var values = Sequelize.getValuesDedup(null);
+
+				expect(values).to.be.null;
+			});
+
+			it('undefined', function() {
+				var values = Sequelize.getValuesDedup();
+
+				expect(values).to.be.undefined;
+			});
+		});
+
+		describe('handles object', function() {
+			it('with no include', function() {
+				return Promise.bind(this).then(function() {
+					return this.Task.find({where: {name: 'Washing'}});
+				}).then(function(item) {
+					var values = Sequelize.getValuesDedup(item);
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.washing.id,
+						name: 'Washing',
+						UserId: this.john.id,
+						OwnerId: this.bob.id
+					});
+				});
+			});
+
+			describe('with belongsTo include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.Task.find({
+							where: {name: 'Washing'},
+							include: [{model: this.User}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValuesDedup(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.washing.id,
+							name: 'Washing',
+							OwnerId: this.bob.id,
+							User: {
+								id: this.john.id,
+								name: 'John'
+							}
+						});
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.Task.find({
+							where: {name: 'Washing'},
+							include: [{model: this.User, as: 'Owner'}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValuesDedup(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.washing.id,
+							name: 'Washing',
+							UserId: this.john.id,
+							Owner: {
+								id: this.bob.id,
+								name: 'Bob'
+							}
+						});
+					});
+				});
+			});
+
+			describe('with hasOne include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'Bob'},
+							include: [{model: this.Profile}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValuesDedup(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.bob.id,
+							name: 'Bob',
+							Profile: {
+								id: this.profile.id,
+								name: 'Profile',
+								AltUserId: this.john.id
+							}
+						});
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'John'},
+							include: [{model: this.Profile, as: 'AltProfile'}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValuesDedup(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.john.id,
+							name: 'John',
+							AltProfile: {
+								id: this.profile.id,
+								name: 'Profile',
+								UserId: this.bob.id
+							}
+						});
+					});
+				});
+			});
+
+			describe('with hasMany include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'John'},
+							include: [{model: this.Task}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValuesDedup(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.john.id,
+							name: 'John',
+							Tasks: [{
+								id: this.washing.id,
+								name: 'Washing',
+								OwnerId: this.bob.id
+							}]
+						});
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'Bob'},
+							include: [{model: this.Task, as: 'OwnedTasks'}]
+						});
+					}).then(function(item) {
+						var values = Sequelize.getValuesDedup(item);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.bob.id,
+							name: 'Bob',
+							OwnedTasks: [{
+								id: this.washing.id,
+								name: 'Washing',
+								UserId: this.john.id
+							}]
+						});
+					});
+				});
+			});
+
+			describe('with belongsToMany include', function() {
+				describe('other join', function() {
+					describe('with no as', function() {
+						it('with no through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.find({
+									where: {name: 'Bob'},
+									include: [{model: this.Group}]
+								});
+							}).then(function(item) {
+								var values = Sequelize.getValuesDedup(item);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal({
+									id: this.bob.id,
+									name: 'Bob',
+									Groups: [{
+										id: this.admin.id,
+										name: 'Admin'
+									}]
+								});
+							});
+						});
+
+						it('with through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.find({
+									where: {name: 'Bob'},
+									include: [{model: this.Party}]
+								});
+							}).then(function(item) {
+								var values = Sequelize.getValuesDedup(item);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal({
+									id: this.bob.id,
+									name: 'Bob',
+									Parties: [{
+										id: this.wild.id,
+										name: 'Wild',
+										UserParty: {
+											status: 'OK'
+										}
+									}]
+								});
+							});
+						});
+					});
+
+					describe('with as', function() {
+						it('with no through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.find({
+									where: {name: 'Bob'},
+									include: [{model: this.Task, as: 'WorkTasks'}]
+								});
+							}).then(function(item) {
+								var values = Sequelize.getValuesDedup(item);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal({
+									id: this.bob.id,
+									name: 'Bob',
+									WorkTasks: [{
+										id: this.washing.id,
+										name: 'Washing',
+										UserId: this.john.id,
+										OwnerId: this.bob.id
+									}]
+								});
+							});
+						});
+
+						it('with through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.find({
+									where: {name: 'John'},
+									include: [{model: this.Task, as: 'SuperviseTasks'}]
+								});
+							}).then(function(item) {
+								var values = Sequelize.getValuesDedup(item);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal({
+									id: this.john.id,
+									name: 'John',
+									SuperviseTasks: [{
+										id: this.washing.id,
+										name: 'Washing',
+										UserId: this.john.id,
+										OwnerId: this.bob.id,
+										TaskSupervisor: {
+											status: 'OK'
+										}
+									}]
+								});
+							});
+						});
+					});
+				});
+
+				describe('self join', function() {
+					it('with no through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'Bob'},
+								include: [{model: this.User, as: 'Likes'}]
+							});
+						}).then(function(item) {
+							var values = Sequelize.getValuesDedup(item);
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.bob.id,
+								name: 'Bob',
+								Likes: [{
+									id: this.john.id,
+									name: 'John'
+								}]
+							});
+						});
+					});
+
+					it('with through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'John'},
+								include: [{model: this.User, as: 'Hates'}]
+							});
+						}).then(function(item) {
+							var values = Sequelize.getValuesDedup(item);
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.john.id,
+								name: 'John',
+								Hates: [{
+									id: this.bob.id,
+									name: 'Bob',
+									UserHate: {
+										status: 'OK'
+									}
+								}]
+							});
+						});
+					});
+				});
+			});
+		});
+
+		describe('handles array', function() {
+			it('with no include', function() {
+				return Promise.bind(this).then(function() {
+					return this.Task.findAll({where: {name: 'Washing'}});
+				}).then(function(items) {
+					var values = Sequelize.getValuesDedup(items);
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal([{
+						id: this.washing.id,
+						name: 'Washing',
+						UserId: this.john.id,
+						OwnerId: this.bob.id
+					}]);
+				});
+			});
+
+			describe('with belongsTo include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.Task.findAll({
+							where: {name: 'Washing'},
+							include: [{model: this.User}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValuesDedup(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.washing.id,
+							name: 'Washing',
+							OwnerId: this.bob.id,
+							User: {
+								id: this.john.id,
+								name: 'John'
+							}
+						}]);
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.Task.findAll({
+							where: {name: 'Washing'},
+							include: [{model: this.User, as: 'Owner'}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValuesDedup(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.washing.id,
+							name: 'Washing',
+							UserId: this.john.id,
+							Owner: {
+								id: this.bob.id,
+								name: 'Bob'
+							}
+						}]);
+					});
+				});
+			});
+
+			describe('with hasOne include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.findAll({
+							where: {name: 'Bob'},
+							include: [{model: this.Profile}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValuesDedup(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.bob.id,
+							name: 'Bob',
+							Profile: {
+								id: this.profile.id,
+								name: 'Profile',
+								AltUserId: this.john.id
+							}
+						}]);
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.findAll({
+							where: {name: 'John'},
+							include: [{model: this.Profile, as: 'AltProfile'}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValuesDedup(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.john.id,
+							name: 'John',
+							AltProfile: {
+								id: this.profile.id,
+								name: 'Profile',
+								UserId: this.bob.id
+							}
+						}]);
+					});
+				});
+			});
+
+			describe('with hasMany include', function() {
+				it('with no as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.findAll({
+							where: {name: 'John'},
+							include: [{model: this.Task}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValuesDedup(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.john.id,
+							name: 'John',
+							Tasks: [{
+								id: this.washing.id,
+								name: 'Washing',
+								OwnerId: this.bob.id
+							}]
+						}]);
+					});
+				});
+
+				it('with as', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.findAll({
+							where: {name: 'Bob'},
+							include: [{model: this.Task, as: 'OwnedTasks'}]
+						});
+					}).then(function(items) {
+						var values = Sequelize.getValuesDedup(items);
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal([{
+							id: this.bob.id,
+							name: 'Bob',
+							OwnedTasks: [{
+								id: this.washing.id,
+								name: 'Washing',
+								UserId: this.john.id
+							}]
+						}]);
+					});
+				});
+			});
+
+			describe('with belongsToMany include', function() {
+				describe('other join', function() {
+					describe('with no as', function() {
+						it('with no through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.findAll({
+									where: {name: 'Bob'},
+									include: [{model: this.Group}]
+								});
+							}).then(function(items) {
+								var values = Sequelize.getValuesDedup(items);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal([{
+									id: this.bob.id,
+									name: 'Bob',
+									Groups: [{
+										id: this.admin.id,
+										name: 'Admin'
+									}]
+								}]);
+							});
+						});
+
+						it('with through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.findAll({
+									where: {name: 'Bob'},
+									include: [{model: this.Party}]
+								});
+							}).then(function(items) {
+								var values = Sequelize.getValuesDedup(items);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal([{
+									id: this.bob.id,
+									name: 'Bob',
+									Parties: [{
+										id: this.wild.id,
+										name: 'Wild',
+										UserParty: {
+											status: 'OK'
+										}
+									}]
+								}]);
+							});
+						});
+					});
+
+					describe('with as', function() {
+						it('with no through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.findAll({
+									where: {name: 'Bob'},
+									include: [{model: this.Task, as: 'WorkTasks'}]
+								});
+							}).then(function(items) {
+								var values = Sequelize.getValuesDedup(items);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal([{
+									id: this.bob.id,
+									name: 'Bob',
+									WorkTasks: [{
+										id: this.washing.id,
+										name: 'Washing',
+										UserId: this.john.id,
+										OwnerId: this.bob.id
+									}]
+								}]);
+							});
+						});
+
+						it('with through fields', function() {
+							return Promise.bind(this).then(function() {
+								return this.User.findAll({
+									where: {name: 'John'},
+									include: [{model: this.Task, as: 'SuperviseTasks'}]
+								});
+							}).then(function(items) {
+								var values = Sequelize.getValuesDedup(items);
+
+								expectPlain(values);
+
+								expect(values).to.deep.equal([{
+									id: this.john.id,
+									name: 'John',
+									SuperviseTasks: [{
+										id: this.washing.id,
+										name: 'Washing',
+										UserId: this.john.id,
+										OwnerId: this.bob.id,
+										TaskSupervisor: {
+											status: 'OK'
+										}
+									}]
+								}]);
+							});
+						});
+					});
+				});
+
+				describe('self join', function() {
+					it('with no through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.findAll({
+								where: {name: 'Bob'},
+								include: [{model: this.User, as: 'Likes'}]
+							});
+						}).then(function(items) {
+							var values = Sequelize.getValuesDedup(items);
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal([{
+								id: this.bob.id,
+								name: 'Bob',
+								Likes: [{
+									id: this.john.id,
+									name: 'John'
+								}]
+							}]);
+						});
+					});
+
+					it('with through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.findAll({
+								where: {name: 'John'},
+								include: [{model: this.User, as: 'Hates'}]
+							});
+						}).then(function(items) {
+							var values = Sequelize.getValuesDedup(items);
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal([{
+								id: this.john.id,
+								name: 'John',
+								Hates: [{
+									id: this.bob.id,
+									name: 'Bob',
+									UserHate: {
+										status: 'OK'
+									}
+								}]
+							}]);
+						});
+					});
+				});
+			});
+		});
+	});
+
+	describe('ModelInstance#getValuesDedup()', function() {
+		it('with no include', function() {
 			return Promise.bind(this).then(function() {
-				return this.Task.find({where: {name: 'Washing'}, include: [{model: this.User, as: 'Owner'}]});
+				return this.Task.find({where: {name: 'Washing'}});
 			}).then(function(item) {
 				var values = item.getValuesDedup();
 
-				expect(values.dataValues).not.to.exist;
-				expect(values.OwnerId).not.to.exist;
-				expect(values.Owner).to.be.ok;
-				expect(values.Owner.dataValues).not.to.exist;
-				expect(values.Owner.id).to.equal(this.bob.id);
+				expectPlain(values);
+
+				expect(values).to.deep.equal({
+					id: this.washing.id,
+					name: 'Washing',
+					UserId: this.john.id,
+					OwnerId: this.bob.id
+				});
 			});
 		});
-	});
 
-	describe('many-to-many join', function() {
-		it('Instance#getValuesDedup()', function() {
-			return Promise.bind(this).then(function() {
-				return this.Task.find({where: {name: 'Washing'}, include: [{model: this.User, as: 'Workers'}]});
-			}).then(function(item) {
-				var values = item.getValuesDedup();
+		describe('with belongsTo include', function() {
+			it('with no as', function() {
+				return Promise.bind(this).then(function() {
+					return this.Task.find({
+						where: {name: 'Washing'},
+						include: [{model: this.User}]
+					});
+				}).then(function(item) {
+					var values = item.getValuesDedup();
 
-				expect(values.Workers).to.be.ok;
-				expect(values.Workers.length).to.equal(1);
-				expect(values.Workers[0].dataValues).not.to.exist;
-				expect(values.Workers[0].id).to.equal(this.bob.id);
+					expectPlain(values);
 
-				expect(values.Workers[0].TaskWorker.UserId).not.to.exist;
-				expect(values.Workers[0].TaskWorker.TaskId).not.to.exist;
+					expect(values).to.deep.equal({
+						id: this.washing.id,
+						name: 'Washing',
+						OwnerId: this.bob.id,
+						User: {
+							id: this.john.id,
+							name: 'John'
+						}
+					});
+				});
+			});
+
+			it('with as', function() {
+				return Promise.bind(this).then(function() {
+					return this.Task.find({
+						where: {name: 'Washing'},
+						include: [{model: this.User, as: 'Owner'}]
+					});
+				}).then(function(item) {
+					var values = item.getValuesDedup();
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.washing.id,
+						name: 'Washing',
+						UserId: this.john.id,
+						Owner: {
+							id: this.bob.id,
+							name: 'Bob'
+						}
+					});
+				});
+			});
+		});
+
+		describe('with hasOne include', function() {
+			it('with no as', function() {
+				return Promise.bind(this).then(function() {
+					return this.User.find({
+						where: {name: 'Bob'},
+						include: [{model: this.Profile}]
+					});
+				}).then(function(item) {
+					var values = item.getValuesDedup();
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.bob.id,
+						name: 'Bob',
+						Profile: {
+							id: this.profile.id,
+							name: 'Profile',
+							AltUserId: this.john.id
+						}
+					});
+				});
+			});
+
+			it('with as', function() {
+				return Promise.bind(this).then(function() {
+					return this.User.find({
+						where: {name: 'John'},
+						include: [{model: this.Profile, as: 'AltProfile'}]
+					});
+				}).then(function(item) {
+					var values = item.getValuesDedup();
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.john.id,
+						name: 'John',
+						AltProfile: {
+							id: this.profile.id,
+							name: 'Profile',
+							UserId: this.bob.id
+						}
+					});
+				});
+			});
+		}),
+
+		describe('with hasMany include', function() {
+			it('with no as', function() {
+				return Promise.bind(this).then(function() {
+					return this.User.find({
+						where: {name: 'John'},
+						include: [{model: this.Task}]
+					});
+				}).then(function(item) {
+					var values = item.getValuesDedup();
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.john.id,
+						name: 'John',
+						Tasks: [{
+							id: this.washing.id,
+							name: 'Washing',
+							OwnerId: this.bob.id
+						}]
+					});
+				});
+			});
+
+			it('with as', function() {
+				return Promise.bind(this).then(function() {
+					return this.User.find({
+						where: {name: 'Bob'},
+						include: [{model: this.Task, as: 'OwnedTasks'}]
+					});
+				}).then(function(item) {
+					var values = item.getValuesDedup();
+
+					expectPlain(values);
+
+					expect(values).to.deep.equal({
+						id: this.bob.id,
+						name: 'Bob',
+						OwnedTasks: [{
+							id: this.washing.id,
+							name: 'Washing',
+							UserId: this.john.id
+						}]
+					});
+				});
+			});
+		});
+
+		describe('with belongsToMany include', function() {
+			describe('other join', function() {
+				describe('with no as', function() {
+					it('with no through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'Bob'},
+								include: [{model: this.Group}]
+							});
+						}).then(function(item) {
+							var values = item.getValuesDedup();
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.bob.id,
+								name: 'Bob',
+								Groups: [{
+									id: this.admin.id,
+									name: 'Admin'
+								}]
+							});
+						});
+					});
+
+					it('with through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'Bob'},
+								include: [{model: this.Party}]
+							});
+						}).then(function(item) {
+							var values = item.getValuesDedup();
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.bob.id,
+								name: 'Bob',
+								Parties: [{
+									id: this.wild.id,
+									name: 'Wild',
+									UserParty: {
+										status: 'OK'
+									}
+								}]
+							});
+						});
+					});
+				});
+
+				describe('with as', function() {
+					it('with no through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'Bob'},
+								include: [{model: this.Task, as: 'WorkTasks'}]
+							});
+						}).then(function(item) {
+							var values = item.getValuesDedup();
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.bob.id,
+								name: 'Bob',
+								WorkTasks: [{
+									id: this.washing.id,
+									name: 'Washing',
+									UserId: this.john.id,
+									OwnerId: this.bob.id
+								}]
+							});
+						});
+					});
+
+					it('with through fields', function() {
+						return Promise.bind(this).then(function() {
+							return this.User.find({
+								where: {name: 'John'},
+								include: [{model: this.Task, as: 'SuperviseTasks'}]
+							});
+						}).then(function(item) {
+							var values = item.getValuesDedup();
+
+							expectPlain(values);
+
+							expect(values).to.deep.equal({
+								id: this.john.id,
+								name: 'John',
+								SuperviseTasks: [{
+									id: this.washing.id,
+									name: 'Washing',
+									UserId: this.john.id,
+									OwnerId: this.bob.id,
+									TaskSupervisor: {
+										status: 'OK'
+									}
+								}]
+							});
+						});
+					});
+				});
+			});
+
+			describe('self join', function() {
+				it('with no through fields', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'Bob'},
+							include: [{model: this.User, as: 'Likes'}]
+						});
+					}).then(function(item) {
+						var values = item.getValuesDedup();
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.bob.id,
+							name: 'Bob',
+							Likes: [{
+								id: this.john.id,
+								name: 'John'
+							}]
+						});
+					});
+				});
+
+				it('with through fields', function() {
+					return Promise.bind(this).then(function() {
+						return this.User.find({
+							where: {name: 'John'},
+							include: [{model: this.User, as: 'Hates'}]
+						});
+					}).then(function(item) {
+						var values = item.getValuesDedup();
+
+						expectPlain(values);
+
+						expect(values).to.deep.equal({
+							id: this.john.id,
+							name: 'John',
+							Hates: [{
+								id: this.bob.id,
+								name: 'Bob',
+								UserHate: {
+									status: 'OK'
+								}
+							}]
+						});
+					});
+				});
 			});
 		});
 	});
 });
+
+/**
+ * Check an object is plain.
+ * Throws if:
+ *   - is subclass
+ *   - has properties from a prototype
+ *
+ * Deep checks the object:
+ *   - Traverses all properties of objects
+ *   - Iterates through all items of arrays
+ */
+function expectPlain(obj) {
+	var isArray = false;
+	if (Array.isArray(obj)) {
+		expect(obj.constructor).to.equal(Array);
+		expect(obj.__proto__).to.equal(Array.prototype); // jshint ignore:line
+
+		obj.forEach(function(value) {
+			expectPlain(value);
+		});
+
+		isArray = true;
+	}
+
+	if (obj && typeof obj == 'object') {
+		if (!isArray) {
+			expect(obj.constructor).to.equal(Object);
+			expect(obj.__proto__).to.equal(Object.prototype); // jshint ignore:line
+		}
+
+		for (var key in obj) {
+			expect(obj).to.have.ownProperty(key);
+			expectPlain(obj[key]);
+		}
+	}
+}

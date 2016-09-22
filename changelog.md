@@ -45,6 +45,7 @@
 ## Next
 
 * `getValuesDedup()` removes duplicate IDs from HasMany includes
+* New tests
 * Support only Node v4 upwards
 * Update dev dependencies
 * Replace `Makefile` with npm scripts
