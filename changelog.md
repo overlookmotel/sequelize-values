@@ -42,7 +42,7 @@
 * Update dependency lodash
 * Update dev dependencies
 
-## Next
+## 1.0.0
 
 * Support Sequelize v4.x.x
 * Support only Node v4 upwards
