@@ -40,7 +40,17 @@
     "sequelize",
     "sequelize-plugin",
     "values",
-    "get"
+    "get",
+    "raw",
+    "plain",
+    "deep",
+    "recurse",
+    "recursive",
+    "nested",
+    "dedup",
+    "duplicate",
+    "duplicates",
+    "redundant"
   ],
   "scripts": {
     "test": "npm run jshint && npm run test-main",
