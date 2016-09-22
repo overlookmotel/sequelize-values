@@ -53,6 +53,7 @@
 * Replace `Makefile` with npm scripts
 * Travis CI runs on all branches (to support greenkeeper.io)
 * Drop testing on Travis CI for `mariadb` + `mssql` dialects
+* Increase tests timeout to 30 seconds
 * `.DS_Store` in `.gitignore`
 * README update
 * npm keywords
