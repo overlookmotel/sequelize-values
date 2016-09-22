@@ -26,9 +26,8 @@ node_js:
   - "0.12"
 
 branches:
-  only:
-    - master
-    - dev
+  except:
+    - /^v\d+\./
 
 matrix:
   fast_finish: true
