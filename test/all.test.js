@@ -1,9 +1,12 @@
-// --------------------
-// Sequelize values
-// Tests
-// --------------------
+/* --------------------
+ * sequelize-values Sequelize plugin
+ * Tests
+ * ------------------*/
 
-// modules
+/* jshint expr: true */
+/* global describe, it, beforeEach */
+
+// Modules
 var chai = require('chai'),
 	expect = chai.expect,
 	promised = require('chai-as-promised'),
@@ -13,27 +16,24 @@ var chai = require('chai'),
 
 var sequelizeVersion = require('sequelize/package.json').version;
 
-// init
+// Init
 chai.use(promised);
 chai.config.includeStack = true;
 
-// tests
-
-/* jshint expr: true */
-/* global describe, it, beforeEach */
-
+// Log Sequelize version
 console.log('Sequelize version:', sequelizeVersion);
 
+// Tests
 describe(Support.getTestDialectTeaser('Tests'), function () {
 	beforeEach(function() {
-		// models
+		// Models
 		this.User = this.sequelize.define('User', {name: Sequelize.STRING}, {timestamps: false});
 		this.Task = this.sequelize.define('Task', {name: Sequelize.STRING}, {timestamps: false});
 		this.Profile = this.sequelize.define('Profile', {name: Sequelize.STRING}, {timestamps: false});
 		this.Group = this.sequelize.define('Group', {name: Sequelize.STRING}, {timestamps: false});
 		this.Party = this.sequelize.define('Party', {name: Sequelize.STRING}, {timestamps: false});
 
-		// through models
+		// Through models
 		this.TaskWorker = this.sequelize.define('TaskWorker', {}, {tableName: 'TasksWorkers', timestamps: false});
 		this.TaskSupervisor = this.sequelize.define('TaskSupervisor', {status: Sequelize.STRING}, {tableName: 'TasksSupervisors', timestamps: false});
 		this.UserGroup = this.sequelize.define('UserGroup', {}, {tableName: 'UsersGroups', timestamps: false});
@@ -41,21 +41,21 @@ describe(Support.getTestDialectTeaser('Tests'), function () {
 		this.UserLike = this.sequelize.define('UserLike', {}, {tableName: 'UsersLikes', timestamps: false});
 		this.UserHate = this.sequelize.define('UserHate', {status: Sequelize.STRING}, {tableName: 'UsersHates', timestamps: false});
 
-		// one-to-one relationships
+		// One-to-one relationships
 		this.Profile.belongsTo(this.User);
 		this.User.hasOne(this.Profile);
 
 		this.Profile.belongsTo(this.User, {as: 'AltUser'});
 		this.User.hasOne(this.Profile, {as: 'AltProfile', foreignKey: 'AltUserId'});
 
-		// one-to-many relationships
+		// One-to-many relationships
 		this.Task.belongsTo(this.User);
 		this.User.hasMany(this.Task);
 
 		this.Task.belongsTo(this.User, {as: 'Owner'});
 		this.User.hasMany(this.Task, {as: 'OwnedTasks', foreignKey: 'OwnerId'});
 
-		// many-to-many relationships
+		// Many-to-many relationships
 		this.Task.belongsToMany(this.User, {as: 'Workers', through: this.TaskWorker});
 		this.User.belongsToMany(this.Task, {as: 'WorkTasks', through: this.TaskWorker});
 
@@ -68,14 +68,14 @@ describe(Support.getTestDialectTeaser('Tests'), function () {
 		this.Party.belongsToMany(this.User, {through: this.UserParty});
 		this.User.belongsToMany(this.Party, {through: this.UserParty});
 
-		// many-to-many self relationships
+		// Many-to-many self relationships
 		this.User.belongsToMany(this.User, {as: 'Likes', through: this.UserLike, foreignKey: 'UserId'});
 		this.User.belongsToMany(this.User, {as: 'Likers', through: this.UserLike, foreignKey: 'LikeId'});
 
 		this.User.belongsToMany(this.User, {as: 'Hates', through: this.UserHate, foreignKey: 'UserId'});
 		this.User.belongsToMany(this.User, {as: 'Haters', through: this.UserHate, foreignKey: 'HateId'});
 
-		// sync db and create records
+		// Sync database, create records and define associations between them
 		return Promise.bind(this).then(function() {
 			return this.sequelize.sync({force: true});
 		}).then(function() {
@@ -2137,13 +2137,15 @@ describe(Support.getTestDialectTeaser('Tests'), function () {
 
 /**
  * Check an object is plain.
- * Throws if:
- *   - is subclass
- *   - has properties from a prototype
  *
  * Deep checks the object:
- *   - Traverses all properties of objects
- *   - Iterates through all items of arrays
+ *   - Traverses all properties of Objects
+ *   - Iterates through all items of Arrays
+ *
+ * Throws if encounters any object that is a subclass of Object or Array.
+ *
+ * @param {Object|Array} obj - Object/Array to check
+ * @throws {Error} - If finds something which is not a plain Object/Array
  */
 function expectPlain(obj) {
 	var isArray = false;
