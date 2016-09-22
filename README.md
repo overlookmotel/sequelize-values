@@ -16,6 +16,8 @@ A few utility functions for getting raw data from Sequelize instances. Includes 
 
 Requires Sequelize v2.x.x or v3.x.x.
 
+Version v1.0.0 onwards supports only Node v4 or higher. Currently, all tests pass on Node v0.10 and v0.12, but these versions of Node will no longer be tested against so this cannot be guaranteed in future releases.
+
 ## Usage
 
 ### Loading module

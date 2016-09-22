@@ -44,6 +44,7 @@
 
 ## Next
 
+* Support only Node v4 upwards
 * Update dev dependencies
 * Replace `Makefile` with npm scripts
 * Travis CI runs on all branches (to support greenkeeper.io)
