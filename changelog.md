@@ -45,3 +45,4 @@
 ## Next
 
 * Replace `Makefile` with npm scripts
+* Drop testing on Travis CI for `mariadb` + `mssql` dialects
