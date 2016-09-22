@@ -44,10 +44,11 @@
 
 ## Next
 
+* Support Sequelize v4.x.x
+* Support only Node v4 upwards
 * `getValuesDedup()` removes duplicate IDs from HasMany includes
 * New tests
 * Code comments
-* Support only Node v4 upwards
 * Update dev dependencies
 * Replace `Makefile` with npm scripts
 * Travis CI runs on all branches (to support greenkeeper.io)
