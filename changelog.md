@@ -47,3 +47,4 @@
 * Update dev dependencies
 * Replace `Makefile` with npm scripts
 * Drop testing on Travis CI for `mariadb` + `mssql` dialects
+* Update license
