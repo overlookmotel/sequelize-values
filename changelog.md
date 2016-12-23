@@ -62,3 +62,7 @@
 ## 1.0.1
 
 * Update `lodash` dependency
+
+## Next
+
+* Remove Sequelize peer dependency to fix Travis fails
