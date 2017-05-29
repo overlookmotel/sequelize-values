@@ -1,5 +1,7 @@
 # sequelize-values.js
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/overlookmotel/sequelize-values.svg)](https://greenkeeper.io/)
+
 # Easily get raw data from Sequelize instances
 
 [![NPM version](https://img.shields.io/npm/v/sequelize-values.svg)](https://www.npmjs.com/package/sequelize-values)
